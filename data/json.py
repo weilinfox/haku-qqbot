@@ -1,4 +1,6 @@
-
+"""
+json 文件读取写入和检测是否存在
+"""
 import os
 import sys
 import json

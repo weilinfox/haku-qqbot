@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+"""
+bot 启动脚本
+"""
 import os.path
 import signal
 import sys
@@ -46,6 +49,7 @@ def __parse_message(raw_message_dict: dict):
         return
     # 处理 message
     message.handle()
+    message.reply_send()
 
 
 def __parse_notice(raw_message_dict: dict):
@@ -113,7 +117,7 @@ def __parse_requests(raw_message_dict: dict):
     处理请求并分发
     :param raw_message_dict: 原始消息字典
     """
-    support_type = ['message']
+    support_type = ['message', 'notice', 'request', 'meta_event']
     post_type = raw_message_dict.get('post_type', '')
     if post_type not in support_type:
         return
@@ -134,7 +138,7 @@ def route_message() -> str:
     except Exception as e:
         logger.exception(f'RuntimeError while parsing request: {e}')
     else:
-        new_thread = threading.Thread(target=__parse_message, args=[raw_message_dict], daemon=True)
+        new_thread = threading.Thread(target=__parse_requests, args=[raw_message_dict], daemon=True)
         new_thread.start()
     return ''
 

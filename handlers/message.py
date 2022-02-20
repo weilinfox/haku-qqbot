@@ -1,9 +1,14 @@
-
+"""
+消息处理 Message ，插件命令获取
+TODO: 复读
+插件调用 Plugin ，插件回复消息发送
+"""
 import re
 import importlib
 import threading
 from typing import Dict, List
 
+import api.gocqhttp
 import haku.config
 import haku.report
 import data.log
@@ -15,6 +20,12 @@ class Message:
     消息类
     """
     def __init__(self, message_type: str, sub_type: str, message_id: int, user_id: int):
+        """
+        :param message_type: 消息类型 group private
+        :param sub_type: 子类型 group friend
+        :param message_id: 消息 id
+        :param user_id: 用户 uid
+        """
         self.message_type = message_type
         self.sub_type = sub_type
         self.message_id = message_id
@@ -29,7 +40,10 @@ class Message:
         return self.message_type == 'group'
 
     def is_private_message(self):
-        return self.message_type == 'private'
+        return self.message_type == 'private' and self.sub_type == 'friend'
+
+    def is_temporary_private_message(self):
+        return self.message_type == 'private' and self.sub_type == 'group'
 
     def handle(self):
         """
@@ -65,7 +79,12 @@ class Message:
         """
         if len(self.reply) <= 0:
             return
-        pass
+        if self.is_group_message():
+            api.gocqhttp.send_group_msg(self.group_id, self.reply)
+        elif self.is_private_message():
+            api.gocqhttp.send_private_msg(self.user_id, self.reply)
+        elif self.is_temporary_private_message():
+            api.gocqhttp.send_temporary_private_msg(self.user_id, self.group_id, self.reply)
 
 
 class Plugin:
@@ -73,10 +92,10 @@ class Plugin:
     插件类
     插件首次载入配置： config()
     插件调用： run(Message) -> str
-    插件退出： quit()
+    插件退出： bye()
     """
     __plugin_prefix = 'plugins.commands.'
-    __plugin_default_config = {'group_id': [0, ], 'user_id': [0, ]}
+    __plugin_default_config = {'group_id': [], 'user_id': []}
     __plugin_object_dict: Dict[str, object] = dict()
     __plugin_reload_lock = threading.Lock()
 
@@ -92,7 +111,7 @@ class Plugin:
         :param plugin_name: 插件名
         :return: 是否可以运行
         """
-        file = f'{str}.json'
+        file = f'{plugin_name}.json'
         if data.json.json_have_file(file):
             my_config = data.json.json_load_file(file)
             try:
@@ -123,33 +142,39 @@ class Plugin:
             return ''
         plugin_name = self.__plugin_prefix + self.plugin_name
         plugin_message = ''
-        if self.__authorized(plugin_name):
-            data.log.get_logger().debug(f'Now execute plugin {plugin_name}')
-            plugin_obj = self.__plugin_object_dict.get(plugin_name)
-            if plugin_obj is None:
-                try:
-                    plugin_obj = importlib.import_module(plugin_name)
-                except ModuleNotFoundError:
-                    data.log.get_logger().debug(f'No such plugin {self.plugin_name}')
-                else:
-                    # 记入缓存
-                    self.__plugin_object_dict.update({plugin_name: plugin_obj})
-                    # 运行 config()
-                    if 'config' in dir(plugin_obj):
-                        try:
-                            plugin_obj.config(self.message)
-                        except Exception as e:
-                            data.log.get_logger().exception(f'RuntimeError while configuring module {plugin_name}: {e}')
-            # 成功载入 运行 run()
-            if plugin_obj is not None:
+
+        # 载入插件
+        data.log.get_logger().debug(f'Now load plugin {plugin_name}')
+        plugin_obj = self.__plugin_object_dict.get(plugin_name)
+        if plugin_obj is None:
+            try:
+                plugin_obj = importlib.import_module(plugin_name)
+            except ModuleNotFoundError:
+                data.log.get_logger().debug(f'No such plugin {plugin_name}')
+            else:
+                # 记入缓存
+                self.__plugin_object_dict.update({plugin_name: plugin_obj})
+                # 运行 config()
+                if 'config' in dir(plugin_obj):
+                    try:
+                        plugin_obj.config()
+                    except Exception as e:
+                        data.log.get_logger().exception(f'RuntimeError while configuring module {plugin_name}: {e}')
+        # 成功载入
+        if plugin_obj is not None:
+            # 权限检查
+            if self.__authorized(plugin_name):
+                # 运行 run()
                 if 'run' in dir(plugin_obj):
                     try:
                         plugin_message = plugin_obj.run(self.message)
                     except Exception as e:
                         data.log.get_logger().exception(f'RuntimeError while running module {plugin_name}: {e}')
-        else:
-            data.log.get_logger().debug(f'The plugin request from group {self.message.group_id} \
-user {self.message.user_id} was blocked')
+            else:
+                data.log.get_logger().debug(
+                    f'The plugin request from group {self.message.group_id} '
+                    f'user {self.message.user_id} was blocked'
+                )
         return plugin_message
 
     def reload(self):
@@ -157,9 +182,9 @@ user {self.message.user_id} was blocked')
             delete_name: List[str] = []
             for obj in self.__plugin_object_dict.values():
                 # 插件退出
-                if 'quit' in dir(obj):
+                if 'bye' in dir(obj):
                     try:
-                        obj.quit()
+                        obj.bye()
                     except Exception as e:
                         data.log.get_logger().exception(f'RuntimeError while quit module {obj.__name__}: {e}')
             for (name, obj) in self.__plugin_object_dict.items():

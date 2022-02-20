@@ -1,4 +1,6 @@
-
+"""
+hakuBot 主体
+"""
 import sys
 import flask
 import haku.config
@@ -6,7 +8,8 @@ import haku.config
 
 class Bot(object):
     """
-    bot 主类 单例
+    bot 单例类
+    hakuBot 主类，实例化 config.Config 和 Flask
     """
     __judge = None
     __config = None
@@ -31,6 +34,8 @@ class Bot(object):
         """
         if not self.__config.configure():
             print('配置没有完成，请检查错误输出后尝试重启~', file=sys.stderr)
+            # 这里建立一个 flask 对象来防止后面引用对象时出现异常，其实由于配置没有完成程序即将退出
+            self.__flask = flask.Flask('None')
             return False
 
         # flask 对象

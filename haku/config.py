@@ -1,15 +1,23 @@
+"""
+检测配置文件和目录，对缺失配置文件写入默认配置
+读取 bot 所有的配置文件，并根据配置文件配置各个模块
+"""
 import os
 import sys
 import yaml
+from typing import List
+
+import api.gocqhttp
 import data.log
 import data.json
 import data.sqlite
+import haku.report
 
 _DEFAULT_CONFIG = {
     "server_config": {
         "listen_host": "127.0.0.1",
         "listen_port": 8000,
-        "post_url": "127.0.0.1:8001",
+        "post_url": "http://127.0.0.1:8001/",
         "access_token": "",
         "flask_threads": True,
         "flask_debug": False,
@@ -18,8 +26,8 @@ _DEFAULT_CONFIG = {
     },
     "bot_config": {
         "bot_name": "haku_bot",
-        "admin_qq": 0,
-        "admin_group": 0,
+        "admin_qq": [],
+        "admin_group": [],
         "index": "."
     }
 }
@@ -32,7 +40,7 @@ _DEFAULT_KEYS = {
 
 class Config(object):
     """
-    bot 配置 单例
+    bot 配置 单例类
     读取 config.yaml 和 keys.yaml 并初始化 bot
     """
     __name = 'haku_bot'
@@ -45,7 +53,7 @@ class Config(object):
     __judge = None
 
     def __new__(cls, *args, **kwargs):
-        if cls.__judge is None or cls.__path is None:
+        if cls.__judge is None or cls.__judge.__path is None:
             cls.__judge = object.__new__(cls)
         return cls.__judge
 
@@ -85,6 +93,20 @@ class Config(object):
         if not data.sqlite.sqlite_set_config(sqlite_path):
             return False
 
+        # 配置 report
+        qq_list = self.get_admin_qq_list()
+        grp_list = self.get_admin_group_list()
+        if isinstance(qq_list, list):
+            for uid in qq_list:
+                haku.report.report_add_admin_user(uid)
+        if isinstance(grp_list, list):
+            for gid in grp_list:
+                haku.report.report_add_admin_group(gid)
+
+        # 配置 api
+        if not api.gocqhttp.cqhttp_init(self.get_post_url(), self.get_access_token()):
+            return False
+
         print(f'{self.__name} 配置完成')
         return True
 
@@ -112,11 +134,11 @@ class Config(object):
     def get_console_log_level(self) -> str:
         return self.__server_config.get('console_log_level', 'INFO')
 
-    def get_admin_qq(self) -> int:
-        return self.__bot_config.get('admin_qq', 0)
+    def get_admin_qq_list(self) -> List[int]:
+        return self.__bot_config.get('admin_qq')
 
-    def get_admin_group(self) -> int:
-        return self.__bot_config.get('admin_group', 0)
+    def get_admin_group_list(self) -> List[int]:
+        return self.__bot_config.get('admin_group')
 
     def get_bot_name(self) -> str:
         return self.__name

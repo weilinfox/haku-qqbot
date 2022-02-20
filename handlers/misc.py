@@ -1,3 +1,8 @@
+"""
+杂项消息的处理
+TODO: go-cqhttp 除了 message 和心跳包以外的处理
+"""
+
 
 class Misc:
     """

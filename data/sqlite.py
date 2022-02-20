@@ -1,4 +1,6 @@
-
+"""
+sqlite3 数据库处理是否存在
+"""
 import os
 import sys
 import sqlite3
@@ -24,6 +26,16 @@ def sqlite_set_config(path: str) -> bool:
     else:
         os.mkdir(path, 0o755)
     return True
+
+
+def sqlite_have_db(path: str) -> bool:
+    """
+    查找是否存在指定 db 文件
+    :param path: 文件名/相对路径
+    :return: 存在否
+    """
+    path = os.path.join(__sqlite_path, path)
+    return os.path.exists(path)
 
 
 def sqlite_open_db(path: str) -> sqlite3.Connection:
