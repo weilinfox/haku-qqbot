@@ -18,6 +18,7 @@ from haku.alarm import Alarm
 version = 'v0.0.1-alpha'
 bot = Bot(os.path.dirname(__file__))
 can_run = bot.configure()
+stop_flag = False
 app = bot.get_flask_obj()
 if can_run:
     logger = data.log.get_logger()
@@ -44,6 +45,8 @@ def __parse_message(raw_message_dict: dict):
         if message_type == 'group':
             message.group_id = raw_message_dict['group_id']
         message.time = raw_message_dict['time']
+        message.self_id = raw_message_dict['self_id']
+        data.log.get_logger().debug(f'Get message: {raw_message_dict}')
     except Exception as e:
         logger.exception(f'RuntimeError while parsing message: {e}')
         return
@@ -133,6 +136,8 @@ def __parse_requests(raw_message_dict: dict):
 
 @app.route('/', methods=['POST', 'GET'])
 def route_message() -> str:
+    if stop_flag:
+        return ''
     try:
         raw_message_dict = flask.request.get_json()
     except Exception as e:
@@ -148,6 +153,11 @@ def update_plugins() -> str:
     return 'update'
 
 
+@app.route('/handler', methods=['GET'])
+def route_handler() -> str:
+    return 'handler'
+
+
 @app.route('/threads', methods=['GET'])
 def thread_info() -> str:
     return 'threads'
@@ -155,6 +165,9 @@ def thread_info() -> str:
 
 @app.route('/stop', methods=['GET'])
 def stop_bot() -> str:
+    global stop_flag
+    stop_flag = True
+    bot.stop()
     return 'stop'
 
 

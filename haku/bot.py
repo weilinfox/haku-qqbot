@@ -3,7 +3,10 @@ hakuBot 主体
 """
 import sys
 import flask
+
 import haku.config
+import haku.cache
+import handlers.message
 
 
 class Bot(object):
@@ -13,6 +16,7 @@ class Bot(object):
     """
     __judge = None
     __config = None
+    __cache = None
     __flask = None
 
     def __new__(cls, *args, **kwargs):
@@ -38,6 +42,9 @@ class Bot(object):
             self.__flask = flask.Flask('None')
             return False
 
+        # cache 对象
+        self.__cache = haku.cache.Cache()
+
         # flask 对象
         self.__flask = flask.Flask(self.__config.get_bot_name())
         return True
@@ -53,6 +60,14 @@ class Bot(object):
             threaded=self.__config.get_flask_threaded(),
             processes=1
         )
+
+    def stop(self):
+        """
+        停止服务 持久化数据
+        """
+        plugin = handlers.message.Plugin()
+        plugin.stop(dead_lock=True)
+        self.__cache.backup(drop_connection=True)
 
     def get_flask_obj(self) -> flask.Flask:
         """

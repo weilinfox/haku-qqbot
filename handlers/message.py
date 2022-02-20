@@ -14,11 +14,23 @@ import haku.report
 import data.log
 import data.json
 
+_plugin_err_code = -1
+_plugin_success_code = 1
+
 
 class Message:
     """
     消息类
     """
+
+    # 嗯这些就是为了复读！
+    __group_msg_cache_1 = {}
+    __group_msg_cache_2 = {}
+    # 特定消息不处理
+    __block_msg = [
+        '[视频]你的QQ暂不支持查看视频短片，请升级到最新版本后查看。',
+    ]
+
     def __init__(self, message_type: str, sub_type: str, message_id: int, user_id: int):
         """
         :param message_type: 消息类型 group private
@@ -31,6 +43,7 @@ class Message:
         self.message_id = message_id
         self.user_id = user_id
         self.group_id = 0
+        self.self_id = 0
         self.message = self.raw_message = ''
         self.time = 0
         self.info: dict
@@ -49,6 +62,26 @@ class Message:
         """
         处理消息 判断插件调用 获取插件回复
         """
+        if self.message in self.__block_msg:
+            return
+
+        # 判断复读！
+        repeat = False
+        if self.is_group_message():
+            new_cache = {'msg': self.message, 'id': self.user_id, 'time': self.time}
+            if self.group_id in self.__group_msg_cache_1.keys():
+                cached = self.__group_msg_cache_1[self.group_id]
+                if self.message == cached['msg'] and self.self_id == cached['id']:
+                    pass
+                else:
+                    self.__group_msg_cache_2[self.group_id] = cached
+                    if self.message == cached['msg'] and self.time - cached['time'] < 15:
+                        new_cache['id'] = self.self_id
+                        repeat = True
+                    self.__group_msg_cache_1[self.group_id] = new_cache
+            else:
+                self.__group_msg_cache_1[self.group_id] = new_cache
+
         # 判断是否调用插件
         call_plugin = False
         plugin_name = ''
@@ -64,13 +97,18 @@ class Message:
                 call_plugin = True
         except Exception as e:
             data.log.get_logger().exception(f'RuntimeError while checking message: {e}')
-        else:
-            if not call_plugin:
-                return
 
         # 调用插件
-        plugin = Plugin(plugin_name, self)
-        self.reply = plugin.handle()
+        if call_plugin:
+            plugin = Plugin(plugin_name, self)
+            code, self.reply = plugin.handle()
+            # 调用插件则不可能复读
+            if code == _plugin_success_code:
+                repeat = False
+
+        # 复读！
+        if repeat:
+            api.gocqhttp.send_group_msg(self.group_id, self.message)
 
     def reply_send(self):
         """
@@ -133,13 +171,14 @@ class Plugin:
             data.json.json_write_file(file, self.__plugin_default_config)
         return True
 
-    def handle(self) -> str:
+    def handle(self) -> (int, str):
         """
         调用插件并返回回复消息
         :return: 回复消息
         """
         if len(self.plugin_name) <= 0:
-            return ''
+            return _plugin_err_code, ''
+        return_code = _plugin_success_code
         plugin_name = self.__plugin_prefix + self.plugin_name
         plugin_message = ''
 
@@ -150,6 +189,7 @@ class Plugin:
             try:
                 plugin_obj = importlib.import_module(plugin_name)
             except ModuleNotFoundError:
+                return_code = _plugin_err_code
                 data.log.get_logger().debug(f'No such plugin {plugin_name}')
             else:
                 # 记入缓存
@@ -175,18 +215,15 @@ class Plugin:
                     f'The plugin request from group {self.message.group_id} '
                     f'user {self.message.user_id} was blocked'
                 )
-        return plugin_message
+        return return_code, plugin_message
 
     def reload(self):
+        """
+        插件重载
+        """
         with self.__plugin_reload_lock:
             delete_name: List[str] = []
-            for obj in self.__plugin_object_dict.values():
-                # 插件退出
-                if 'bye' in dir(obj):
-                    try:
-                        obj.bye()
-                    except Exception as e:
-                        data.log.get_logger().exception(f'RuntimeError while quit module {obj.__name__}: {e}')
+            self.stop()
             for (name, obj) in self.__plugin_object_dict.items():
                 try:
                     self.__plugin_object_dict[name] = importlib.reload(obj)
@@ -199,3 +236,18 @@ class Plugin:
                     haku.report.report_send(error_msg)
             for name in delete_name:
                 self.__plugin_object_dict.pop(name)
+
+    def stop(self, dead_lock: bool = False):
+        """
+        插件退出
+        :param dead_lock: 之后不再允许插件重载（停止服务时置为 True）
+        """
+        if dead_lock:
+            if not self.__plugin_reload_lock.locked():
+                self.__plugin_reload_lock.acquire()
+        for obj in self.__plugin_object_dict.values():
+            if 'bye' in dir(obj):
+                try:
+                    obj.bye()
+                except Exception as e:
+                    data.log.get_logger().exception(f'RuntimeError while quit module {obj.__name__}: {e}')
