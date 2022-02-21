@@ -2,6 +2,19 @@
 定时任务触发
 任务线程数量监控和堆积上报
 心跳包个数监控和缺失上报
+
+用法：
+    实例化: Alarm(alarm_duration, heart_beat_enable, callback)
+            callback 为接收到 SIGALRM 时的回调
+            允许重复配置，但是重复配置会导致一些参数被重置
+    获取实例: alarm = Alarm()
+    配置 SIGALRM 间隔: alarm.set_duration(duration)
+            duration 为间隔的秒数
+    新心跳包传入: alarm.new_heart_beat(duration)
+            duration 为心跳包的间隔
+    心跳包是否过期: expired = alarm.heart_beat_expired()
+    回调线程是否堆积: piled_up = alarm.thread_piled_up()
+            允许同时存在的线程个数由 __thread_list_warn_len 设置
 """
 import signal
 import threading
@@ -133,4 +146,8 @@ class Alarm(object):
         return self.__heart_beat_expire < 0
 
     def thread_piled_up(self) -> bool:
+        """
+        回调线程是否堆积
+        :return: 是否堆积
+        """
         return len(self.__thread_list) > self.__thread_list_warn_len

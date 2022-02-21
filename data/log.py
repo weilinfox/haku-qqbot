@@ -1,5 +1,12 @@
 """
 全局日志
+
+用法：
+    配置全局日志: flag = log_set_config(bot_name, path, console_level, file_level)
+                bot_name 为 bot 名称，用于日志记录器命名，
+                path 为日志文件目录路径， console_level 为终端日志等级， file_level 为文件记录等级
+                配置在 __log_config 中
+    获取日志记录器 Logger 对象: get_logger()
 """
 import os
 import sys

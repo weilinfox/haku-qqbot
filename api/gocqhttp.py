@@ -1,6 +1,11 @@
 """
 go-cqhttp api
-TODO: 完成剩余的 api ，发送错误上报
+TODO: 完成剩余的 api
+
+用法：
+    初始化 api : cqhttp_init(url, token)
+            url 为 go-cqhttp 上报地址， token 为上报口令
+    调用 api : 查看代码
 """
 import requests
 import re
@@ -88,7 +93,8 @@ def send_private_msg(user_id: int, message: str, auto_escape: bool = False) -> (
     :return: http 状态码，消息 ID
     """
     params = {'user_id': user_id, 'message': message, 'auto_escape': auto_escape}
-    return __parse_message_response(__send_requests('send_private_msg', params))
+    code, resp = __send_requests('send_private_msg', params)
+    return __parse_message_response(code, resp)
 
 
 def send_temporary_private_msg(user_id: int, group_id: int, message: str, auto_escape: bool = False) -> (int, dict):

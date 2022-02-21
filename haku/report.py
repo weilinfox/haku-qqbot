@@ -1,6 +1,12 @@
 """
 向管理群和管理 qq 号发送错误报告
 TODO: 邮件支持
+
+用法：
+    添加管理群号: report_add_admin_group(group_id)
+    添加管理员 qq id : report_add_admin_user(user_id)
+    向所有管理群和管理员发送消息: report_send(message)
+                message 为消息 str
 """
 from typing import List
 

@@ -4,6 +4,13 @@
 实例化时读取上次存储的缓存
 backup 方法将缓存持久化
 TODO: 由于当前是一次性读取所有缓存，可以改成需要该表且 sql 语句相同时读取缓存
+
+用法：
+    获取实例: cache = Cache()
+    获取内存数据库连接: cache.get_connection(name, sql)
+        name 为数据库名称， sql 为数据库建表语句
+    备份数据库: cache.backup(drop_connection)
+        若在持久化数据库后需要关闭所有内存中数据库的连接，则 drop_connection=True ，否则不传入
 """
 import sqlite3
 from typing import Dict

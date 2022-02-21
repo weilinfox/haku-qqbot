@@ -1,6 +1,15 @@
 """
 检测配置文件和目录，对缺失配置文件写入默认配置
 读取 bot 所有的配置文件，并根据配置文件配置各个模块
+
+用法：
+    初始化配置: config = Config(path)
+            不允许重复初始化
+    获取实例: config = Config()
+    运行配置: flag = config.configure()
+            flag 判断是否配置成功
+    获取配置参数: obj = config.get_*()
+            obj 获取配置的值，配置不存在将返回默认配置
 """
 import os
 import sys
@@ -62,7 +71,7 @@ class Config(object):
         首次成功初始化后，可以通过不带参数的构造获得成功构造的实例
         :param path: main.py 所在目录
         """
-        if path is None:
+        if path is None or self.__path is not None:
             return
         self.__path = f'{path}/files'
         self.__config_path = os.path.join(self.__path, 'config.yaml')

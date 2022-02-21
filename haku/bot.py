@@ -1,5 +1,15 @@
 """
 hakuBot 主体
+
+用法：
+    初始化 : bot = Bot(path)
+            bot.configure()
+            初始化后再获取实例，即使给出 path 也不会重新配置
+    获取实例 : bot = Bot()
+    运行 bot : bot.run()
+    停止 bot : bot.stop()
+            持久化数据并停止 bot 的服务，但是不会停止 Flask
+    获取 Flask 对象: obj = bot.get_flask_obj()
 """
 import sys
 import flask
@@ -24,10 +34,12 @@ class Bot(object):
             cls.__judge = object.__new__(cls)
         return cls.__judge
 
-    def __init__(self, path: str):
+    def __init__(self, path: str = None):
         """
         :param path: main.py 所在目录
         """
+        if path is None or self.__config is not None:
+            return
         self.__config = haku.config.Config(path)
         self.__flask_debug = False
 

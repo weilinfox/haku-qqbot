@@ -1,7 +1,40 @@
 """
-消息处理 Message ，插件命令获取
-TODO: 复读
-插件调用 Plugin ，插件回复消息发送
+消息处理 Message ，插件命令获取，插件回复消息发送
+
+用法：
+    获取实例 : message = Message(message_type, sub_type, message_id, user_id)
+              message = Message(message_type, sub_type, message_id, user_id, inter_msg=True)
+                inter_msg 用于判断是否为内部消息（用于定时任务消息），默认为聊天消息
+    判断是否群消息 : message.is_group_message()
+    判断是否临时私聊消息 : message.is_temporary_private_message()
+    判断是否为好友私聊消息 : message.is_private_message()
+    处理该消息（复读，插件调用） : message.handle()
+    发送回复消息（如果有的话） : message.reply_send()
+
+插件调用 Plugin ，具有调用权限白名单，支持在线升级
+
+用法：
+    获取实例 : plugin = Plugin(name, message)
+              plugin = Plugin(name)
+              plugin = Plugin()
+            name 为插件名，message 为 Message 对象
+            message 中至少存在实例化所必须的信息： message_type 、 sub_type 、 message_id 、 user_id ，
+            以及 group_id （如果为群消息）、 message 和 raw_message
+            注意如果不给出 name 或 message ，则该对象的 handle 方法永远返回 plugin_err_code
+    运行插件 : code, msg = plugin.handle()
+            将会调用插件的 run() 方法（如果存在），运行前自动进行权限检查，如果不允许调用则获得 plugin_block_code
+            code 可能为 plugin_success_code 、 plugin_err_code 或 plugin_block_codd ，msg 为回复的消息
+            调用前会先调用 test 方法检查是否存在
+    检查插件是否存在 : flag, obj = plugin.test(name)
+            flag 为是否存在 True/False ，如果为 True 则 obj 是模块对象
+            如果该插件已经载入则调用缓存，反之检查是否存在，存在则载入并写入缓存
+            注意每个插件在 bot 整个运行过程中只会被载入一次，首次载入会调用插件的 config() 方法（如果存在）
+    重载插件 : plugin.reload()
+            首先调用 stop 方法，然后重载所有插件模块，可以用于插件的在线升级
+    停止插件 : plugin.stop(dead_lock)
+              plugin.stop()
+            将会调用插件的 bye() 方法（如果存在）
+            dead_lock 参数默认为 False ，如果为 True 则会在之后阻止 reload 方法的调用，这个功能用于在停止时服务使用
 """
 import re
 import importlib
@@ -14,8 +47,9 @@ import haku.report
 import data.log
 import data.json
 
-_plugin_err_code = -1
-_plugin_success_code = 1
+plugin_err_code = -1
+plugin_success_code = 0
+plugin_block_code = 1
 
 
 class Message:
@@ -31,12 +65,13 @@ class Message:
         '[视频]你的QQ暂不支持查看视频短片，请升级到最新版本后查看。',
     ]
 
-    def __init__(self, message_type: str, sub_type: str, message_id: int, user_id: int):
+    def __init__(self, message_type: str, sub_type: str, message_id: int, user_id: int, inter_msg: bool = False):
         """
         :param message_type: 消息类型 group private
-        :param sub_type: 子类型 group friend
+        :param sub_type: 消息类型 private 时有子类型 group friend
         :param message_id: 消息 id
         :param user_id: 用户 uid
+        :param inter_msg: 是否为内部消息 默认为聊天消息
         """
         self.message_type = message_type
         self.sub_type = sub_type
@@ -48,6 +83,10 @@ class Message:
         self.time = 0
         self.info: dict
         self.reply: str = ''
+        # 调用 handle 以后可以检查是否调用了插件
+        self.can_call = False
+        # 内部消息 即不是聊天消息
+        self.inter_msg = inter_msg
 
     def is_group_message(self):
         return self.message_type == 'group'
@@ -67,20 +106,21 @@ class Message:
 
         # 判断复读！
         repeat = False
-        if self.is_group_message():
-            new_cache = {'msg': self.message, 'id': self.user_id, 'time': self.time}
-            if self.group_id in self.__group_msg_cache_1.keys():
-                cached = self.__group_msg_cache_1[self.group_id]
-                if self.message == cached['msg'] and self.self_id == cached['id']:
-                    pass
+        if not self.inter_msg:
+            if self.is_group_message():
+                new_cache = {'msg': self.message, 'id': self.user_id, 'time': self.time}
+                if self.group_id in self.__group_msg_cache_1.keys():
+                    cached = self.__group_msg_cache_1[self.group_id]
+                    if self.message == cached['msg'] and self.self_id == cached['id']:
+                        pass
+                    else:
+                        self.__group_msg_cache_2[self.group_id] = cached
+                        if self.message == cached['msg'] and self.time - cached['time'] < 15:
+                            new_cache['id'] = self.self_id
+                            repeat = True
+                        self.__group_msg_cache_1[self.group_id] = new_cache
                 else:
-                    self.__group_msg_cache_2[self.group_id] = cached
-                    if self.message == cached['msg'] and self.time - cached['time'] < 15:
-                        new_cache['id'] = self.self_id
-                        repeat = True
                     self.__group_msg_cache_1[self.group_id] = new_cache
-            else:
-                self.__group_msg_cache_1[self.group_id] = new_cache
 
         # 判断是否调用插件
         call_plugin = False
@@ -88,11 +128,12 @@ class Message:
         try:
             index = haku.config.Config().get_index()
             message_sequence = self.message.split()
-            plugin_name_judge = r'^{}[_A-Za-z]+$'.format(index)
+            plugin_name_judge = r'^[_A-Za-z]+$'.format(index)
             if len(message_sequence) <= 0 or len(message_sequence[0]) <= 0:
                 return
             com = re.compile(plugin_name_judge)
-            if not com.match(message_sequence[0]) is None:
+            index_len = len(index)
+            if com.match(message_sequence[0][index_len:]) is not None and message_sequence[0][:index_len] == index:
                 plugin_name = message_sequence[0][1:]
                 call_plugin = True
         except Exception as e:
@@ -100,10 +141,11 @@ class Message:
 
         # 调用插件
         if call_plugin:
+            self.can_call = True
             plugin = Plugin(plugin_name, self)
             code, self.reply = plugin.handle()
             # 调用插件则不可能复读
-            if code == _plugin_success_code:
+            if code == plugin_success_code:
                 repeat = False
 
         # 复读！
@@ -137,9 +179,7 @@ class Plugin:
     __plugin_object_dict: Dict[str, object] = dict()
     __plugin_reload_lock = threading.Lock()
 
-    def __init__(self, name: str = None, message: Message = None):
-        if name is None or message is None:
-            return
+    def __init__(self, name: str = '', message: Message = None):
         self.plugin_name = name.strip()
         self.message = message
 
@@ -174,34 +214,17 @@ class Plugin:
     def handle(self) -> (int, str):
         """
         调用插件并返回回复消息
-        :return: 回复消息
+        :return: 操作代码(plugin_success_code/plugin_err_code/plugin_block_code), 回复消息
         """
-        if len(self.plugin_name) <= 0:
-            return _plugin_err_code, ''
-        return_code = _plugin_success_code
+        if self.plugin_name is None or len(self.plugin_name) <= 0 or self.message is None:
+            return plugin_err_code, ''
+        return_code = plugin_success_code
         plugin_name = self.__plugin_prefix + self.plugin_name
         plugin_message = ''
 
-        # 载入插件
-        data.log.get_logger().debug(f'Now load plugin {plugin_name}')
-        plugin_obj = self.__plugin_object_dict.get(plugin_name)
-        if plugin_obj is None:
-            try:
-                plugin_obj = importlib.import_module(plugin_name)
-            except ModuleNotFoundError:
-                return_code = _plugin_err_code
-                data.log.get_logger().debug(f'No such plugin {plugin_name}')
-            else:
-                # 记入缓存
-                self.__plugin_object_dict.update({plugin_name: plugin_obj})
-                # 运行 config()
-                if 'config' in dir(plugin_obj):
-                    try:
-                        plugin_obj.config()
-                    except Exception as e:
-                        data.log.get_logger().exception(f'RuntimeError while configuring module {plugin_name}: {e}')
-        # 成功载入
-        if plugin_obj is not None:
+        # 载入判断
+        flag, plugin_obj = self.test(self.plugin_name)
+        if flag:
             # 权限检查
             if self.__authorized(plugin_name):
                 # 运行 run()
@@ -211,11 +234,46 @@ class Plugin:
                     except Exception as e:
                         data.log.get_logger().exception(f'RuntimeError while running module {plugin_name}: {e}')
             else:
+                return_code = plugin_block_code
                 data.log.get_logger().debug(
                     f'The plugin request from group {self.message.group_id} '
                     f'user {self.message.user_id} was blocked'
                 )
+        else:
+            return_code = plugin_err_code
+
         return return_code, plugin_message
+
+    def test(self, plugin_name: str = None) -> (bool, object):
+        """
+        测试是否存在插件，存在则载入并配置
+        :param plugin_name: 插件名
+        """
+        # 模块名
+        if plugin_name is None:
+            module_name = self.__plugin_prefix + self.plugin_name
+        else:
+            module_name = self.__plugin_prefix + plugin_name
+
+        # 载入插件
+        data.log.get_logger().debug(f'Now test plugin {module_name}')
+        plugin_obj = self.__plugin_object_dict.get(module_name)
+        if plugin_obj is None:
+            try:
+                plugin_obj = importlib.import_module(module_name)
+            except ModuleNotFoundError:
+                data.log.get_logger().debug(f'No such plugin {module_name}')
+                return False, None
+            else:
+                # 记入缓存
+                self.__plugin_object_dict.update({module_name: plugin_obj})
+                # 运行 config()
+                if 'config' in dir(plugin_obj):
+                    try:
+                        plugin_obj.config()
+                    except Exception as e:
+                        data.log.get_logger().exception(f'RuntimeError while configuring module {module_name}: {e}')
+        return True, plugin_obj
 
     def reload(self):
         """
