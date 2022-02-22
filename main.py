@@ -7,22 +7,28 @@ import signal
 import sys
 import threading
 import time
+from typing import List
 
 import flask
 
 import data.log
+import haku.report
 from handlers.message import Message
 from handlers.schedule import Schedule
 from handlers.misc import Misc
 from haku.bot import Bot
 from haku.alarm import Alarm
 
-version = 'v0.0.1-alpha'
+version = 'v0.0.1-beta'
 bot = Bot(os.path.dirname(__file__))
 can_run = bot.configure()
 stop_flag = False
 app = bot.get_flask_obj()
 bot_pid = os.getpid()
+
+__flask_threads: List[threading.Thread] = []
+__flask_thread_max = 100
+
 if can_run:
     logger = data.log.get_logger()
 
@@ -145,6 +151,7 @@ def __parse_requests(raw_message_dict: dict):
 
 @app.route('/', methods=['POST', 'GET'])
 def route_message() -> str:
+    global __flask_threads
     if stop_flag:
         return ''
     try:
@@ -154,6 +161,21 @@ def route_message() -> str:
     else:
         new_thread = threading.Thread(target=__parse_requests, args=[raw_message_dict], daemon=True)
         new_thread.start()
+        __flask_threads.append(new_thread)
+    # 清理 thread list
+    dead_thread: List[threading.Thread] = []
+    for i in range(len(__flask_threads)):
+        if not __flask_threads[i].is_alive():
+            dead_thread.append(__flask_threads[i])
+    for obj in dead_thread:
+        __flask_threads.remove(obj)
+    thread_count = len(__flask_threads)
+    logger.debug(f'Flask thread count: {thread_count}')
+
+    # 线程过多上报
+    if thread_count > __flask_thread_max:
+        haku.report.report_send(f'Threads in haku qqbot piled up: {thread_count}')
+
     return ''
 
 
@@ -164,7 +186,7 @@ def route_handler() -> str:
 
 @app.route('/threads', methods=['GET'])
 def thread_info() -> str:
-    return 'threads'
+    return f'{len(__flask_threads)}'
 
 
 @app.route('/stop', methods=['GET'])
