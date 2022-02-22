@@ -45,13 +45,15 @@ def run(message: Message):
     elif cmd_len >= 4:
         if cmd[1] == 'add':
             try:
-                interval = int(cmd[2])
+                interval = abs(int(cmd[2]))
+                if interval == 0:
+                    interval = 1
             except:
                 ans = 'add 需要一个数字间隔秒数'
             else:
                 r_cmd = message.message.split(maxsplit=3)
                 if schedule.commands_add(message.message_type, message.user_id, message.group_id, r_cmd[3], interval):
-                    ans = f'添加成功 {r_cmd[3]}'
+                    ans = f'添加成功 {interval}秒 {r_cmd[3]}'
                 else:
                     ans = '添加失败'
 

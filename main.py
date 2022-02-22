@@ -169,6 +169,7 @@ def route_message() -> str:
             dead_thread.append(__flask_threads[i])
     for obj in dead_thread:
         __flask_threads.remove(obj)
+        logger.debug(f'Remove flask thread: {obj}')
     thread_count = len(__flask_threads)
     logger.debug(f'Flask thread count: {thread_count}')
 

@@ -62,7 +62,7 @@ def run(message: Message):
     elif cmd_len >= 5:
         if cmd[1] == 'add':
             try:
-                tag = int(cmd[3])
+                tag = abs(int(cmd[3]))
             except:
                 ans = '时间/日期应为四位数字（允许前导零）'
             else:
@@ -70,13 +70,13 @@ def run(message: Message):
                 if cmd[2] == 'time':
                     if schedule.schedule_add_by_time(message.message_type, message.user_id, message.group_id,
                                                      tag//100, tag % 100, r_cmd[4]):
-                        ans = f'添加成功 {r_cmd[4]}'
+                        ans = f'添加成功 {tag//100}时{tag % 100}分 {r_cmd[4]}'
                     else:
                         ans = '添加失败'
                 elif cmd[2] == 'date':
                     if schedule.schedule_add_by_date(message.message_type, message.user_id, message.group_id,
                                                      tag//100, tag % 100, r_cmd[4]):
-                        ans = f'添加成功 {r_cmd[4]}'
+                        ans = f'添加成功{tag//100}月{tag % 100}日 {r_cmd[4]}'
                     else:
                         ans = '添加失败'
     return ans

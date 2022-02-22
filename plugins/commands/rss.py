@@ -85,10 +85,12 @@ def __request(url: str) -> str:
                 break
         if len(ans) > 0:
             __last_feed[url] = entries[0]['title']
-        msg = f'来自 {feed.get("title", "")}'
-        for s in ans:
-            msg += '\n' + s
-        return msg
+            msg = f'来自 {feed.get("title", "")}'
+            for s in ans:
+                msg += '\n' + s
+            return msg
+        else:
+            return ''
     except:
         if url not in __err_list.keys():
             __err_list[url] = tm_now
@@ -134,12 +136,14 @@ def __get(msg_type: str, qid: int) -> str:
     else:
         ans = '小白这里没有你的记录诶'
     for i in range(len(url_lst)):
-        ans += f'\n{i} {url_lst[i]}'
+        ans += f'\n{i+1} {url_lst[i]}'
     return ans
 
 
 def __del(msg_type: str, qid: int, index: int) -> bool:
     sql = 'DELETE FROM rss WHERE type=? AND id=? AND url=?;'
+    if index <= 0:
+        return False
     if msg_type == 'group':
         for url, lst in __rss_group.items():
             if qid in lst:
@@ -165,7 +169,7 @@ def config():
     rss_private: Dict[str, List[int]] = {}
     cur = conn.cursor()
     cur.execute('CREATE TABLE IF NOT EXISTS rss(type text, id int, url text);')
-    for row in cur.execute('SELECT type, id, url FROM rss;'):
+    for row in cur.execute('SELECT type, url, id FROM rss;'):
         if row[0] == 'group':
             if row[1] in __rss_group.keys():
                 rss_group[row[1]].append(row[2])

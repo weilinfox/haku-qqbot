@@ -93,6 +93,7 @@ class Alarm(object):
             for obj in dead_thread:
                 data.log.get_logger().debug(f'Remove SIGALRM handler thread: {obj}')
                 self.__thread_list.remove(obj)
+            data.log.get_logger().debug(f'SIGALRM thread count: {len(self.__thread_list)}')
         # 线程过多上报 由于多每秒一次 SIGALRM 所以线程数应该比较少
         if self.thread_piled_up():
             if self.__thread_piled_up_warn_delay <= 0:
