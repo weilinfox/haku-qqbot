@@ -39,7 +39,8 @@
 import re
 import importlib
 import threading
-from typing import Dict, List
+import types
+from typing import Dict, List, Tuple
 
 import api.gocqhttp
 import haku.config
@@ -176,7 +177,7 @@ class Plugin:
     """
     __plugin_prefix = 'plugins.commands.'
     __plugin_default_config = {'group_id': [], 'user_id': []}
-    __plugin_object_dict: Dict[str, object] = dict()
+    __plugin_object_dict: Dict[str, Tuple[bool, types.ModuleType]] = {}
     __plugin_reload_lock = threading.Lock()
 
     def __init__(self, name: str = '', message: Message = None):
@@ -223,16 +224,19 @@ class Plugin:
         plugin_message = ''
 
         # 载入判断
-        flag, plugin_obj = self.test(self.plugin_name)
+        flag, cfg_flag, plugin_obj = self.test(self.plugin_name)
         if flag:
             # 权限检查
             if self.__authorized(plugin_name):
-                # 运行 run()
-                if 'run' in dir(plugin_obj):
-                    try:
-                        plugin_message = plugin_obj.run(self.message)
-                    except Exception as e:
-                        data.log.get_logger().exception(f'RuntimeError while running module {plugin_name}: {e}')
+                if cfg_flag:
+                    # 运行 run()
+                    if 'run' in dir(plugin_obj):
+                        try:
+                            plugin_message = plugin_obj.run(self.message)
+                        except Exception as e:
+                            data.log.get_logger().exception(f'RuntimeError while running module {plugin_name}: {e}')
+                else:
+                    plugin_message = '模块载入错误 (ᗜ˰ᗜ)'
             else:
                 return_code = plugin_block_code
                 data.log.get_logger().debug(
@@ -244,10 +248,11 @@ class Plugin:
 
         return return_code, plugin_message
 
-    def test(self, plugin_name: str = None) -> (bool, object):
+    def test(self, plugin_name: str = None) -> (bool, bool, object):
         """
         测试是否存在插件，存在则载入并配置
         :param plugin_name: 插件名
+        :return: 是否成功载入，是否成功配置，模块对象
         """
         # 模块名
         if plugin_name is None:
@@ -263,17 +268,20 @@ class Plugin:
                 plugin_obj = importlib.import_module(module_name)
             except ModuleNotFoundError:
                 data.log.get_logger().debug(f'No such plugin {module_name}')
-                return False, None
+                return False, False, None
             else:
-                # 记入缓存
-                self.__plugin_object_dict.update({module_name: plugin_obj})
+                cfg_flag = True
                 # 运行 config()
                 if 'config' in dir(plugin_obj):
                     try:
                         plugin_obj.config()
                     except Exception as e:
                         data.log.get_logger().exception(f'RuntimeError while configuring module {module_name}: {e}')
-        return True, plugin_obj
+                        cfg_flag = False
+                # 记入缓存
+                self.__plugin_object_dict.update({module_name: (cfg_flag, plugin_obj)})
+                return True, cfg_flag, plugin_obj
+        return True, plugin_obj[0], plugin_obj[1]
 
     def reload(self):
         """
@@ -282,9 +290,18 @@ class Plugin:
         with self.__plugin_reload_lock:
             delete_name: List[str] = []
             self.stop()
-            for (name, obj) in self.__plugin_object_dict.items():
+            for name, obj in self.__plugin_object_dict.items():
                 try:
-                    self.__plugin_object_dict[name] = importlib.reload(obj)
+                    new_obj = importlib.reload(obj[1])
+                    # 运行 config()
+                    cfg_flag = True
+                    if 'config' in dir(new_obj):
+                        try:
+                            new_obj.config()
+                        except Exception as e:
+                            data.log.get_logger().exception(f'RuntimeError while reconfiguring module {name}: {e}')
+                            cfg_flag = False
+                    self.__plugin_object_dict[name] = (cfg_flag, new_obj)
                 except ModuleNotFoundError:
                     # 插件已经不存在
                     delete_name.append(name)

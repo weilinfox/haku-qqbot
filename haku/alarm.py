@@ -151,3 +151,6 @@ class Alarm(object):
         :return: 是否堆积
         """
         return len(self.__thread_list) > self.__thread_list_warn_len
+
+    def stop(self):
+        signal.alarm(0)

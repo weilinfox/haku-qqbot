@@ -1,0 +1,13 @@
+[Unit]
+Description=Auto start haku-pybot
+After=network.target
+
+[Service]
+Type=simple
+User=USER
+ExecStart=/PATH/TO/BOT/main.py
+Restart=on-success
+RestartSec=1s
+
+[Install]
+WantedBy=multi-user.target

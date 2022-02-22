@@ -6,6 +6,8 @@ import os.path
 import signal
 import sys
 import threading
+import time
+
 import flask
 
 import data.log
@@ -20,6 +22,7 @@ bot = Bot(os.path.dirname(__file__))
 can_run = bot.configure()
 stop_flag = False
 app = bot.get_flask_obj()
+bot_pid = os.getpid()
 if can_run:
     logger = data.log.get_logger()
 
@@ -27,6 +30,12 @@ if can_run:
 def __signal_sigint_handler(signum, _):
     print('收到 sigint', signum, ' 退出', file=sys.stderr)
     exit(0)
+
+
+def __quitter(delay_sec: int):
+    time.sleep(delay_sec)
+    logger.info('Quit bot now')
+    os.kill(bot_pid, signal.SIGINT)
 
 
 def __parse_message(raw_message_dict: dict):
@@ -148,11 +157,6 @@ def route_message() -> str:
     return ''
 
 
-@app.route('/update', methods=['GET'])
-def update_plugins() -> str:
-    return 'update'
-
-
 @app.route('/handler', methods=['GET'])
 def route_handler() -> str:
     return 'handler'
@@ -168,6 +172,8 @@ def stop_bot() -> str:
     global stop_flag
     stop_flag = True
     bot.stop()
+    delay_sec = 5
+    threading.Thread(target=__quitter, args=(delay_sec, ), daemon=True).start()
     return 'stop'
 
 

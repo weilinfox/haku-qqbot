@@ -16,6 +16,7 @@ import flask
 
 import haku.config
 import haku.cache
+import haku.alarm
 import handlers.message
 
 
@@ -77,6 +78,7 @@ class Bot(object):
         """
         停止服务 持久化数据
         """
+        haku.alarm.Alarm().stop()
         plugin = handlers.message.Plugin()
         plugin.stop(dead_lock=True)
         self.__cache.backup(drop_connection=True)

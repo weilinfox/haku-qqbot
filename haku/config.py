@@ -53,6 +53,7 @@ class Config(object):
     读取 config.yaml 和 keys.yaml 并初始化 bot
     """
     __name = 'haku_bot'
+    __root_path: str = None
     __path: str = None
     __config_path = ''
     __key_path = ''
@@ -71,8 +72,9 @@ class Config(object):
         首次成功初始化后，可以通过不带参数的构造获得成功构造的实例
         :param path: main.py 所在目录
         """
-        if path is None or self.__path is not None:
+        if path is None or self.__root_path is not None:
             return
+        self.__root_path = path
         self.__path = f'{path}/files'
         self.__config_path = os.path.join(self.__path, 'config.yaml')
         self.__key_path = os.path.join(self.__path, 'keys.yaml')
@@ -118,6 +120,9 @@ class Config(object):
 
         print(f'{self.__name} 配置完成')
         return True
+
+    def get_root_path(self) -> str:
+        return self.__root_path
 
     def get_listen_host(self) -> str:
         return self.__server_config['listen_host']

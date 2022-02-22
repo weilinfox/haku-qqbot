@@ -321,8 +321,8 @@ class Schedule(object):
         cmd = cmd[1:]
         cmd_list = cmd.split()
         plugin = handlers.message.Plugin(cmd_list[0])
-        code, _ = plugin.test()
-        if not code:
+        code, flag, _ = plugin.test()
+        if not code or not flag:
             return False
 
         flag = True
