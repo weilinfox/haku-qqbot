@@ -1,3 +1,4 @@
+import calendar
 import time
 import requests
 import feedparser
@@ -9,8 +10,8 @@ from handlers.message import Message
 
 
 __db_name = 'commands.rss.db'
-__rss_group: Dict[str, List[int]] = {}
-__rss_private: Dict[str, List[int]] = {}
+__rss_group: Dict[str, set] = {}
+__rss_private: Dict[str, set] = {}
 __last_feed: Dict[str, str] = {}
 __err_list: Dict[str, float] = {}
 __last_sync: bool
@@ -18,7 +19,7 @@ __last_sync: bool
 
 def __send():
     """
-    发生推送信息
+    发送推送信息
     """
     for url, lst in __rss_group.items():
         msg = __request(url)
@@ -33,7 +34,7 @@ def __send():
     # 错误列表
     tm_now = time.time()
     for url, tm in __err_list.items():
-        if tm_now - tm > 1 * 24 *3600:
+        if tm_now - tm > 1 * 24 * 3600:
             msg = f'{url} 已经超过一天不能正常推送消息，请考虑删除它 (ᗜ˰ᗜ)'
             for uid in __rss_group.get(url, []):
                 api.gocqhttp.send_group_msg(uid, msg)
@@ -75,11 +76,11 @@ def __request(url: str) -> str:
         # 新推送
         for row in entries:
             title = row['title']
-            update_time = time.mktime(row['updated_parsed'])
+            update_time = calendar.timegm(row['published_parsed'])
             if last_feed and last_title == title:
                 break
-            # 十分钟以内可以接受
-            if tm_now - update_time < 600.0:
+            # 半小时以内可以接受
+            if tm_now - update_time < 1800.0:
                 ans.append(f'{title}\n{row.get("author", "")}\n{row.get("link", "")}')
             else:
                 break
@@ -113,7 +114,21 @@ def __db_exec(sql: str, sql_value: tuple) -> bool:
 def __add(msg_type: str, qid: int, url: str) -> bool:
     sql = 'INSERT INTO rss(type, id, url) VALUES(?, ?, ?);'
     sql_value = (msg_type, qid, url)
-    if msg_type in ('group', 'private'):
+    if msg_type == 'group':
+        if url not in __rss_group.keys():
+            __rss_group[url] = set()
+        # 已经存在
+        if qid in __rss_group[url]:
+            return True
+        __rss_group[url].add(qid)
+        return __db_exec(sql, sql_value)
+    elif msg_type == 'private':
+        if url not in __rss_private.keys():
+            __rss_private[url] = set()
+        # 已经存在
+        if qid in __rss_private[url]:
+            return True
+        __rss_private[url].add(qid)
         return __db_exec(sql, sql_value)
     else:
         return False
@@ -162,24 +177,42 @@ def __del(msg_type: str, qid: int, index: int) -> bool:
         return False
 
 
+def __err(msg_type: str, qid: int) -> str:
+    if msg_type == 'group':
+        search_dict = __rss_group
+    elif msg_type == 'private':
+        search_dict = __rss_private
+    else:
+        return ''
+    ans = []
+    for url in __err_list.keys():
+        if qid in search_dict.get(url, []):
+            ans.append(url)
+    if len(ans) == 0:
+        msg = '正常'
+    else:
+        msg = '出错列表：'
+        for url in ans:
+            msg += f'\n{url}'
+    return msg
+
+
 def config():
     global __rss_private, __rss_group, __last_sync
     conn = data.sqlite.sqlite_open_db(__db_name)
-    rss_group: Dict[str, List[int]] = {}
-    rss_private: Dict[str, List[int]] = {}
+    rss_group: Dict[str, set] = {}
+    rss_private: Dict[str, set] = {}
     cur = conn.cursor()
     cur.execute('CREATE TABLE IF NOT EXISTS rss(type text, id int, url text);')
     for row in cur.execute('SELECT type, url, id FROM rss;'):
         if row[0] == 'group':
-            if row[1] in __rss_group.keys():
-                rss_group[row[1]].append(row[2])
-            else:
-                rss_group[row[1]] = [row[2], ]
+            if row[1] not in rss_group.keys():
+                rss_group[row[1]] = set()
+            rss_group[row[1]].add(row[2])
         elif row[0] == 'private':
-            if row[1] in __rss_private.keys():
-                rss_private[row[1]].append(row[2])
-            else:
-                rss_private[row[1]] = [row[2], ]
+            if row[1] not in rss_private.keys():
+                rss_private[row[1]] = set()
+            rss_private[row[1]].add(row[2])
     cur.close()
     data.sqlite.sqlite_close_db(conn)
     __rss_private = rss_private
@@ -194,7 +227,8 @@ def run(message: Message):
                '用法：\n' \
                '    rss list\n' \
                '    rss add <link>\n' \
-               '    rss del <index>'
+               '    rss del <index>\n' \
+               '    rss status'
 
     msg_list = message.message.split()
     msg_len = len(msg_list)
@@ -208,6 +242,8 @@ def run(message: Message):
     if msg_len == 2:
         if msg_list[1] == 'list':
             return __get(message.message_type, qid)
+        elif msg_list[1] == 'status':
+            return __err(message.message_type, qid)
         elif msg_list[1] == 'send':
             __send()
             return ''
@@ -216,7 +252,7 @@ def run(message: Message):
             if __add(message.message_type, qid, msg_list[2]):
                 ans = f'添加成功 {msg_list[2]}'
             else:
-                ans = f'添加失败 {msg_list[2]}'
+                ans = f'添加失败'
         elif msg_list[1] == 'del':
             try:
                 index = int(msg_list[2])
