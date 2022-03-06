@@ -17,7 +17,7 @@ def run(message: Message) -> str:
         ans = help_msg
     else:
         try:
-            resp = requests.get(url='https://v1.hitokoto.cn/', params={'c': 'j'})
+            resp = requests.get(url='https://v1.hitokoto.cn/', params={'c': 'j'}, timeout=30)
             # resp = requests.get(url='http://api.heerdev.top:4995/nemusic/random', timeout=5)
             if resp.status_code == 200:
                 rejson = json.loads(resp.text)
