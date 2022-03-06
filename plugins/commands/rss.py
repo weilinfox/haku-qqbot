@@ -2,7 +2,7 @@ import calendar
 import time
 import requests
 import feedparser
-from typing import Dict, List
+from typing import Dict
 
 import data.sqlite
 import api.gocqhttp
@@ -21,6 +21,7 @@ def __send():
     """
     发送推送信息
     """
+    global __err_list
     for url, lst in __rss_group.items():
         msg = __request(url)
         if msg:
@@ -40,6 +41,7 @@ def __send():
                 api.gocqhttp.send_group_msg(uid, msg)
             for uid in __rss_private.get(url, []):
                 api.gocqhttp.send_private_msg(uid, msg)
+            __err_list[url] = tm_now
 
 
 def __request(url: str) -> str:

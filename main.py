@@ -19,7 +19,7 @@ from handlers.misc import Misc
 from haku.bot import Bot
 from haku.alarm import Alarm
 
-version = 'v0.0.1-beta'
+version = 'v0.0.1-beta-fix1'
 bot = Bot(os.path.dirname(__file__))
 can_run = bot.configure()
 stop_flag = False
