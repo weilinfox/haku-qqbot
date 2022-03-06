@@ -12,6 +12,7 @@ import re
 import sys
 import os
 import traceback
+from typing import Union
 
 import data.log
 
@@ -64,6 +65,8 @@ def __send_requests(endpoint: str, params: dict) -> (int, dict):
 
 def __parse_message_response(code: int, resp: dict) -> (int, int):
     """
+    解析发送消息的响应数据，字段仅有 message_id
+    go-cqhttp 状态码也会转换为 http 状态码
     get retcode and message_id, if retcode != 200 do not use that message_id!
     :param code: request http status code
     :param resp: response dict {'data': {'message_id': -510749883}, 'retcode': 0, 'status': 'ok'}
@@ -97,29 +100,57 @@ def send_private_msg(user_id: int, message: str, auto_escape: bool = False) -> (
     return __parse_message_response(code, resp)
 
 
-def send_temporary_private_msg(user_id: int, group_id: int, message: str, auto_escape: bool = False) -> (int, dict):
+def send_temporary_private_msg(user_id: int, group_id: int, message: str, auto_escape: bool = False) -> (int, int):
     """
     发送临时群消息
     :param user_id: 对方 QQ 号
     :param group_id: 主动发起临时会话群号
     :param message: 要发送的内容
     :param auto_escape: 是否不解析 CQ 码
-    :return:
+    :return: http 状态码，消息 ID
     """
     params = {'user_id': user_id, 'group_id': group_id, 'message': message, 'auto_escape': auto_escape}
-    return __send_requests('send_private_msg', params)
+    code, resp = __send_requests('send_private_msg', params)
+    return __parse_message_response(code, resp)
 
 
-def send_group_msg(group_id: int, message: str, auto_escape: bool = False) -> (int, dict):
+def send_group_msg(group_id: int, message: str, auto_escape: bool = False) -> (int, int):
     """
     发送群消息
     :param group_id: 群号
     :param message: 要发送的内容
-    :param auto_escape:
-    :return:
+    :param auto_escape: 是否不解析 CQ 码
+    :return: http 状态码，消息 ID
     """
     params = {'group_id': group_id, 'message': message, 'auto_escape': auto_escape}
-    return __send_requests('send_group_msg', params)
+    code, resp = __send_requests('send_group_msg', params)
+    return __parse_message_response(code, resp)
+
+
+def send_group_share_music(group_id: int, music_type: str, music_id: Union[int, str]) -> (int, int):
+    """
+    发送私聊音乐分享
+    :param group_id: 群 id
+    :param music_type: 类型
+    :param music_id: 曲目 id
+    :return: http 状态码，消息 ID
+    """
+    if not (music_type in ['qq', '163', 'xm']):
+        return 404, 0
+    return send_group_msg(group_id, f'[CQ:music,type={music_type},id={music_id}]')
+
+
+def send_private_share_music(user_id: int, music_type: str, music_id: Union[int, str]) -> (int, int):
+    """
+    发送群音乐分享
+    :param user_id: qq id
+    :param music_type: 类型
+    :param music_id:  曲目 id
+    :return: http 状态码，消息 ID
+    """
+    if not (music_type in ['qq', '163', 'xm']):
+        return 404, 0
+    return send_private_msg(user_id, f'[CQ:music,type={music_type},id={music_id}]')
 
 
 def send_group_forward_msg(group_id: int, message: str) -> int:
@@ -127,11 +158,57 @@ def send_group_forward_msg(group_id: int, message: str) -> int:
     关于 message 查看 https://docs.go-cqhttp.org/api/#%E5%8F%91%E9%80%81%E5%90%88%E5%B9%B6%E8%BD%AC%E5%8F%91-%E7%BE%A4
     :param group_id: 群 id
     :param message: forward node[]
-    :return: 
+    :return: http 状态码
     """
     params = {'group_id': group_id, 'message': message}
     res, _ = __send_requests('send_group_forward_msg', params)
     return res
 
 
+def send_msg(message_type: str, message: str, user_id: int = 0, group_id: int = 0, auto_escape: bool = False) \
+        -> (int, int):
+    """
+    发送消息
+    :param message_type: group/private
+    :param message: 消息
+    :param user_id: message_type 为 private 时需要
+    :param group_id: message_type 为 group 时需要
+    :param auto_escape: 是否不解析 CQ 码
+    :return: http 状态码，消息 ID
+    """
+    params = {'message_type': message_type, 'message': message, 'user_id': user_id, 'group_id': group_id,
+              'auto_escape': auto_escape}
+    code, resp = __send_requests('send_msg', params)
+    return __parse_message_response(code, resp)
 
+
+def delete_msg(message_id: int) -> int:
+    """
+    撤回消息
+    :param message_id: 消息 id
+    :return: http 状态码
+    """
+    params = {'message_id': message_id}
+    res, _ = __send_requests('delete_msg', params)
+    return res
+
+
+def get_msg(message_id: int) -> int:
+    """
+    获取消息
+    :param message_id: 消息 id
+    :return: http 状态码
+    """
+    params = {'message_id': message_id}
+    res, _ = __send_requests('get_msg', params)
+    return res
+
+
+def get_forward_msg(message_id: int) -> (int, dict):
+    """
+    获取合并转发内容
+    :param message_id: 消息 id
+    :return: http 状态码, 消息字典
+    """
+    params = {'message_id': message_id}
+    return __send_requests('get_forward_msg', params)
