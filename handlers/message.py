@@ -113,10 +113,14 @@ class Message:
                 if self.group_id in self.__group_msg_cache_1.keys():
                     cached = self.__group_msg_cache_1[self.group_id]
                     if self.message == cached['msg'] and self.self_id == cached['id']:
+                        # 已经复读过了
                         pass
                     else:
                         self.__group_msg_cache_2[self.group_id] = cached
-                        if self.message == cached['msg'] and self.time - cached['time'] < 15:
+                        if self.user_id != cached['id'] \
+                                and self.message == cached['msg'] and self.time - cached['time'] < 60:
+                            # 相同 id 和超过时效 60s 的都不复读
+                            # 将缓存消息的 qq id 改为 bot 自身 表示已经复读过了
                             new_cache['id'] = self.self_id
                             repeat = True
                         self.__group_msg_cache_1[self.group_id] = new_cache

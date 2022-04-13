@@ -15,6 +15,7 @@ from handlers.message import Message
 # 初始化时间戳
 start_time = time.gmtime(time.time() + 8 * 3600)
 last_day = [start_time.tm_year, start_time.tm_mon, start_time.tm_mday]
+# last_day = [2022, 3, 21]
 
 # 订阅列表
 subset = set()
@@ -44,23 +45,23 @@ def __loongnix_cn_news() -> list:
     :return: 新闻列表
     """
     baseurl = 'http://www.loongnix.cn'
-    indexurl = '/index.php/%E9%A6%96%E9%A1%B5'
     suburls = {
         # 'product': '/index.php/%E4%BA%A7%E5%93%81%E6%96%B0%E9%97%BB',
         # 'community': '/index.php/%E7%A4%BE%E5%8C%BA%E6%96%B0%E9%97%BB',
-        'loongnix': '/index.php/Loongnix',
-        'java': '/index.php/Java',
+        'lbrowser': '/zh/api/lbrowser/lbrowser-news/',
+        'loongnix': '/zh/loongnix/loongnix-news/',
+        'java': '/zh/api/java/java-news/',
+        'media': '/zh/api/media/media-news/',
     }
 
+    hits = []
     news = []
-    context = __get_page(baseurl + indexurl)
-    hits = list(re.findall(r'<li>.*?</li>', context, flags=re.DOTALL))
     for url in suburls.values():
         context = __get_page(baseurl + url)
-        for h in re.findall(r'<li>.*?</li>', context, flags=re.DOTALL):
+        for h in re.findall(r'<li>(.*?)</li>', context, flags=re.DOTALL):
             hits.append(h)
     for s in hits:
-        msgs = re.findall(r'\[(\d+)[/|-](\d+)[/|-](\d+)](.*?)</li>', s, flags=re.DOTALL)
+        msgs = re.findall(r'(\d+)[/|-](\d+)[/|-](\d+)(.*?)</a>', s, flags=re.DOTALL)
         for h in msgs:
             if len(h) == 4:
                 yy = int(h[0])
@@ -175,3 +176,8 @@ unsub 取消订阅"""
         ans = '汝的操作成功执行'
 
     return ans
+
+
+if __name__ == '__main__':
+    for s in __loongnix_cn_news():
+        print(s)
