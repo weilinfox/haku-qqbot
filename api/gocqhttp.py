@@ -1,5 +1,6 @@
 """
 go-cqhttp api
+原始文档 https://docs.go-cqhttp.org/api/ 或 https://github.com/ishkong/go-cqhttp-docs
 TODO: 完成剩余的 api
 
 用法：
@@ -212,3 +213,195 @@ def get_forward_msg(message_id: int) -> (int, dict):
     """
     params = {'message_id': message_id}
     return __send_requests('get_forward_msg', params)
+
+
+def get_image(file: str) -> (int, dict):
+    """
+    获取图片信息
+    :param file: 图片缓存文件名
+    :return: http 状态码, 消息字典
+    """
+    params = {'file': file}
+    return __send_requests('get_image', params)
+
+
+def group_kick(group_id: int, user_id: int, reject_add_request: bool) -> int:
+    """
+    群组踢人
+    :param group_id: 群号
+    :param user_id: 要踢的 qq 号
+    :param reject_add_request: 拒绝此人的加群请求
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'user_id': user_id, 'reject_add_request': reject_add_request}
+    ret, _ = __send_requests('set_group_kick', params)
+    return ret
+
+
+def group_ban(group_id: int, user_id: int, duration: int) -> int:
+    """
+    群组单人禁言
+    :param group_id: 群号
+    :param user_id: 要禁言的 qq 号
+    :param duration: 禁言时长 秒
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'user_id': user_id, 'duration': duration}
+    ret, _ = __send_requests('set_group_ban', params)
+    return ret
+
+
+def group_ban_cancel(group_id: int, user_id: int) -> int:
+    """
+    群组单人禁言
+    :param group_id: 群号
+    :param user_id: 要解除禁言的 qq 号
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'user_id': user_id, 'duration': 0}
+    ret, _ = __send_requests('set_group_ban', params)
+    return ret
+
+
+def group_anonymous_ban(group_id: int, anonymous: Union[dict, str], duration: int) -> int:
+    """
+    群组匿名用户禁言
+    :param group_id: 群号
+    :param anonymous: 要禁言的匿名用户对象 或要禁言的匿名用户的flag
+    :param duration: 禁言时长 秒
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'duration': duration}
+    if isinstance(anonymous, dict):
+        params.update({'anonymous': anonymous})
+    elif isinstance(anonymous, str):
+        params.update({'anonymous_flag': anonymous})
+    else:
+        return 404
+    ret, _ = __send_requests('set_group_anonymous_ban', params)
+    return ret
+
+
+def group_whole_ban(group_id: int) -> int:
+    """
+    群组全员禁言
+    :param group_id: 群号
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'enable': True}
+    ret, _ = __send_requests('set_group_whole_ban', params)
+    return ret
+
+
+def group_whole_ban_cancel(group_id: int) -> int:
+    """
+    群组取消全员禁言
+    :param group_id: 群号
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'enable': False}
+    ret, _ = __send_requests('set_group_whole_ban', params)
+    return ret
+
+
+def set_group_anonymous(group_id: int, enable: bool) -> int:
+    """
+    设置群组匿名 注 go-cqhttp 未支持
+    :param group_id: 群号
+    :param enable: 是否允许
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'enable': enable}
+    ret, _ = __send_requests('set_group_whole_ban', params)
+    return ret
+
+
+def set_group_card(group_id: int, user_id: int, card: str) -> int:
+    """
+    设置群员备注
+    :param group_id: 群号
+    :param user_id: 要设置的 qq 号
+    :param card: 群备注（空字符串则删除群备注）
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'user_id': user_id, 'card': card}
+    ret, _ = __send_requests('set_group_card', params)
+    return ret
+
+
+def set_group_name(group_id: int, group_name: str) -> int:
+    """
+    设置群名
+    :param group_id: 群号
+    :param group_name: 群名
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'group_name': group_name}
+    ret, _ = __send_requests('set_group_name', params)
+    return ret
+
+
+def group_leave(group_id: int) -> int:
+    """
+    退出群组
+    :param group_id: 群号
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'is_dismiss': False}
+    ret, _ = __send_requests('set_group_leave', params)
+    return ret
+
+
+def group_dismiss(group_id: int) -> int:
+    """
+    解散群组 bot必须是群主 否则将退出该群组
+    :param group_id: 群号
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'is_dismiss': True}
+    ret, _ = __send_requests('set_group_leave', params)
+    return ret
+
+
+def set_group_special_title(group_id: int, user_id: int, special_title: str) -> int:
+    """
+    设置群组专属头衔
+    :param group_id: 群号
+    :param user_id: 要设置的 qq 号
+    :param special_title: 专属头衔
+    :return: http 状态码
+    """
+    params = {'group_id': group_id, 'user_id': user_id, 'special_title': special_title, 'duration': -1}
+    ret, _ = __send_requests('set_group_special_title', params)
+    return ret
+
+
+def set_friend_add_request(flag: str, approve: bool, remark: str = '') -> int:
+    """
+    处理加好友请求
+    :param flag: 加好友请求的 flag
+    :param approve: 是否同意
+    :param remark: 同意添加后的好友备注
+    :return: http 状态码
+    """
+    params = {'flag': flag, 'approve': approve}
+    if approve and len(remark) > 0:
+        params.update({'remark': remark})
+    ret, _ = __send_requests('set_friend_add_request', params)
+    return ret
+
+
+def set_group_add_request(flag: str, sub_type: str, approve: bool, reason: str = '') -> int:
+    """
+    处理加群请求/邀请
+    :param flag: 加群请求的 flag
+    :param sub_type: 请求类型（add 或 invite）
+    :param approve: 是否同意
+    :param reason: 如果拒绝的拒绝理由
+    :return: http 状态码
+    """
+    params = {'flag': flag, 'sub_type': sub_type, 'approve': approve}
+    if not approve and len(reason) > 0:
+        params.update({'reason': reason})
+    ret, _ = __send_requests('set_group_add_request', params)
+    return ret
