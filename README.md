@@ -1,20 +1,25 @@
 # haku bot
 
-日志 flask
-message 消息
-alarm 定时消息
-misc 杂项消息
-配置文件
-数据库
-消息发送 api
-故障上报
-go-cqhttp 管理
+这是原 [py-hakuBot](https://github.com/weilinfox/py-hakuBot) 的重构，但并没有达到它的完善程度
 
-reload：
-不重启 重载插件
-重启 重启程序
+日志 flask
+
+message 消息 alarm 定时消息 misc 杂项消息
+
+配置文件使用 yaml 和 json
+
+数据库使用 sqlite3
+
+消息发送 api 支持 [go-cqhttp](https://github.com/Mrs4s/go-cqhttp)
+
+故障上报到指定 qq 或群组
+
+不重启 bot 即可更新插件
+
+配合 systemd 实现更新后的自动重启
 
 ### 项目结构
+
 + haku
   + core.py
   + report.py
@@ -38,6 +43,7 @@ reload：
 + main.py
 
 ### 目录结构
+
 + files
   + sqlite
     + some.db
