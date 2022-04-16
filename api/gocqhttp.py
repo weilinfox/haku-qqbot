@@ -2,7 +2,6 @@
 go-cqhttp api
 原始文档 https://docs.go-cqhttp.org/api/ 或 https://github.com/ishkong/go-cqhttp-docs
 TODO: 完成剩余的 api
-
 用法：
     初始化 api : cqhttp_init(url, token)
             url 为 go-cqhttp 上报地址， token 为上报口令
@@ -13,7 +12,7 @@ import re
 import sys
 import os
 import traceback
-from typing import Union
+from typing import Union, List
 
 import data.log
 
@@ -609,7 +608,7 @@ def set_group_portrait(group_id: int, file: str, cache: bool = True) -> int:
     return ret
 
 
-def get_word_slices(content: str) -> (int, list[str]):
+def get_word_slices(content: str) -> (int, List[str]):
     """
     获取中文分词 隐藏api 不建议一般用户使用
     :param content: 内容
@@ -764,7 +763,7 @@ def reload_event_filter(file: str) -> int:
     return ret
 
 
-def download_file(url: str, headers: Union[str, list[str]], thread_count: int = 1) -> (int, dict):
+def download_file(url: str, headers: Union[str, List[str]], thread_count: int = 1) -> (int, dict):
     """
     下载文件到缓存目录 调用后会阻塞直到下载完成后才会返回数据
     :param url: 链接地址
