@@ -1,7 +1,9 @@
 """
 go-cqhttp api
 原始文档 https://docs.go-cqhttp.org/api/ 或 https://github.com/ishkong/go-cqhttp-docs
-TODO: 完成剩余的 api
+cqcode 文档 https://docs.go-cqhttp.org/cqcode/
+TODO: fix api bug 添加一些 cqcode 函数
+
 用法：
     初始化 api : cqhttp_init(url, token)
             url 为 go-cqhttp 上报地址， token 为上报口令
@@ -860,3 +862,41 @@ def set_model_show(model: str, model_show: str) -> int:
     params = {'model': model, 'model_show': model_show}
     ret, _ = __send_requests('_set_model_show', params)
     return ret
+
+
+""" 一些 cqcode 帮助函数 """
+
+
+def parse_cqcode_record(url: str, cache: bool = True) -> str:
+    """
+    语音 cq 码
+    :param url: 语音文件名/url
+    :param cache: 是否使用已缓存的文件 url 发送有效
+    :return: cqcode
+    """
+    if cache:
+        return f'[CQ:record,file={url}]'
+    else:
+        return f'[CQ:record,file={url},cache=0]'
+
+
+def parse_cqcode_image(url: str, cache: bool = True) -> str:
+    """
+    图片 cq 码
+    :param url: 图片文件名/url
+    :param cache: 是否使用已缓存的文件 url 发送有效
+    :return: cqcode
+    """
+    if cache:
+        return f'[CQ:image,file={url}]'
+    else:
+        return f'[CQ:image,file={url},cache=0]'
+
+
+def parse_cqcode_face(fid: int) -> str:
+    """
+    语音 cq 码
+    :param fid: 表情 id
+    :return: cqcode
+    """
+    return f'[CQ:face,id={fid}]'
