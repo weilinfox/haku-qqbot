@@ -10,7 +10,7 @@ from handlers.message import Message
 
 # HOST = 'inuyasha.love'
 # PORT = 8001
-URL = 'http://inuyasha.love:8001/search'
+URL = 'https://api.inuyasha.love/netease-cloud-music/search'
 
 myLogger = data.log.get_logger()
 
