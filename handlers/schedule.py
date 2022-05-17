@@ -135,6 +135,10 @@ class Schedule(object):
         if time_now.tm_min == self.__minute:
             return
 
+        if time_now.tm_hour == 9 and time_now.tm_min == 0:
+            # 早九时进行一次 gotify 上报
+            haku.report.report_gotify('犬夜叉様', '昨日も異常がないです。')
+
         self.__minute = time_now.tm_min
         self.__data_reload_delay -= 1
         # 重载数据库

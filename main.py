@@ -19,7 +19,7 @@ from handlers.misc import Misc
 from haku.bot import Bot
 from haku.alarm import Alarm
 
-version = 'v0.0.2'
+version = 'v0.0.3'
 bot = Bot(os.path.dirname(__file__))
 can_run = bot.configure()
 stop_flag = False
@@ -209,6 +209,7 @@ if __name__ == '__main__':
     if can_run:
         signal.signal(signal.SIGINT, __signal_sigint_handler)
         alarm = Alarm(1, True, Schedule().handle)
+        haku.report.report_gotify('小白开始工作', '成功完成配置')
         bot.run()
     else:
         print('初始化不成功', file=sys.stderr)

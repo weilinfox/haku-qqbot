@@ -10,11 +10,17 @@ TODO: 邮件支持
 """
 from typing import List
 
+import requests
+import os
+
 import api.gocqhttp
 import data.log
 
 admin_group: List[int] = []
 admin_user: List[int] = []
+
+gotify_server: str
+gotify_token: str
 
 
 def report_add_admin_group(group_id: int):
@@ -40,3 +46,32 @@ def report_send(message: str):
         code, _ = api.gocqhttp.send_private_msg(uid, message)
         if code != 200:
             data.log.get_logger().error(f'Send report ERROR! Error code {code}')
+
+
+def report_gotify_init(url: str, token: str):
+    """
+    gotify 参数配置
+    :param url: gotify 服务器地址
+    :param token: gotify 频道 token
+    """
+    global gotify_server, gotify_token
+    gotify_server = os.path.join(url, 'message')
+    gotify_token = token
+
+
+def report_gotify(title: str, message: str):
+    """
+    gotify 报告
+    """
+    if gotify_server is None or gotify_token is None:
+        return
+
+    params = {'token': gotify_token}
+    js = {'message': message, 'title': title}
+    try:
+        res = requests.post(url=gotify_server, json=js, params=params, timeout=10)
+    except:
+        data.log.get_logger().exception('Error while report to gotify')
+    else:
+        if res.status_code != 200:
+            data.log.get_logger().error(f'Send gotify ERROR! Response code {res.status_code}')

@@ -61,7 +61,6 @@ __log_config = {
 }
 
 __bot_name: str
-__logger: logging.Logger
 __log_levels = ['CRITICAL', 'FATAL', 'ERROR', 'WARNING', 'WARN', 'INFO', 'DEBUG']
 
 
@@ -114,13 +113,11 @@ def get_logger() -> logging.Logger:
     获取全局 logger
     :return: Logger 对象
     """
-    return __logger
+    return logging.getLogger(__bot_name)
 
 
 def __log_set_global():
     """
     设置全局日志
     """
-    global __logger
     logging.config.dictConfig(__log_config)
-    __logger = logging.getLogger(__bot_name)

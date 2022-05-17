@@ -60,6 +60,7 @@ class Config(object):
     __server_config: dict
     __bot_config: dict
     __bot_keys: dict
+    __gotify_config: dict
     __judge = None
 
     def __new__(cls, *args, **kwargs):
@@ -163,6 +164,12 @@ class Config(object):
     def get_key(self, name: str) -> str:
         return self.__bot_keys.get(name, '')
 
+    def get_gotify_config(self) -> dict:
+        return self.__gotify_config
+
+    def get_gotify_enabled(self) -> bool:
+        return self.__gotify_config is not None
+
     def __read_config(self) -> bool:
         """
         读取配置文件并判断合法性
@@ -201,6 +208,15 @@ class Config(object):
             return False
         self.__server_config = config_dict['server_config']
         self.__bot_config = config_dict['bot_config']
+        gotify_config = config_dict.get('gotify')
+        if gotify_config is not None:
+            print('发现 gotify 配置')
+            if 'server' in gotify_config.keys() and 'token' in gotify_config.keys():
+                haku.report.report_gotify_init(gotify_config['server'], gotify_config['token'])
+                # 缓存 gotify 配置
+                self.__gotify_config = gotify_config
+            else:
+                print('gotify 配置不合法', file=sys.stderr)
         server_config_keys = self.__server_config.keys()
         bot_config_keys = self.__bot_config.keys()
         if 'index' not in bot_config_keys:
