@@ -11,7 +11,7 @@
     处理该消息（复读，插件调用） : message.handle()
     发送回复消息（如果有的话） : message.reply_send()
 
-插件调用 Plugin ，具有调用权限白名单，支持在线升级
+插件调用 Plugin ，具有调用权限黑白名单，支持在线升级
 
 用法：
     获取实例 : plugin = Plugin(name, message)
@@ -180,7 +180,10 @@ class Plugin:
     插件退出： bye()
     """
     __plugin_prefix = 'plugins.commands.'
-    __plugin_default_config = {'group_id': [], 'user_id': []}
+    __plugin_default_config = {
+        'blacklist': {'group_id': [], 'user_id': []},
+        'whitelist': {'group_id': [], 'user_id': []},
+    }
     __plugin_object_dict: Dict[str, Tuple[bool, types.ModuleType]] = {}
     __plugin_reload_lock = threading.Lock()
 
@@ -190,25 +193,33 @@ class Plugin:
 
     def __authorized(self, plugin_name: str) -> bool:
         """
-        准入白名单
+        准入黑白名单 先判断黑名单后判断白名单
         :param plugin_name: 插件名
         :return: 是否可以运行
         """
         file = f'{plugin_name}.json'
         if data.json.json_have_file(file):
             my_config = data.json.json_load_file(file)
+            allow = True
             try:
-                white_group = my_config['group_id']
-                white_user = my_config['user_id']
-                if len(white_group) != 0 or len(white_user) != 0:
-                    # 不为空则开始判断
-                    if self.message.is_group_message():
-                        if self.message.group_id in white_group or self.message.user_id in white_user:
-                            return True
-                    elif self.message.is_private_message():
-                        if self.message.user_id in white_user:
-                            return True
-                    return False
+                white = my_config['whitelist']
+                black = my_config['blacklist']
+                group = black['group_id']
+                user = black['user_id']
+                if len(group) > 0 or len(user) > 0:
+                    if self.message.is_group_message() and self.message.group_id in group:
+                        allow = False
+                    elif self.message.is_private_message() and self.message.user_id in user:
+                        allow = False
+                group = white['group_id']
+                user = white['user_id']
+                if allow and (len(group) > 0 or len(user) > 0):
+                    allow = False
+                    if self.message.is_group_message() and self.message.group_id in group:
+                        allow = True
+                    elif self.message.is_private_message() and self.message.user_id in user:
+                        allow = True
+                return allow
             except Exception as e:
                 data.log.get_logger().exception(f'RuntimeError while authorizing plugin {plugin_name}: {e}')
                 return False
