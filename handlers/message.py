@@ -207,7 +207,8 @@ class Plugin:
                 group = black['group_id']
                 user = black['user_id']
                 if len(group) > 0 or len(user) > 0:
-                    if self.message.is_group_message() and self.message.group_id in group:
+                    if self.message.is_group_message() and \
+                            (self.message.group_id in group or self.message.user_id in user):
                         allow = False
                     elif self.message.is_private_message() and self.message.user_id in user:
                         allow = False
@@ -215,7 +216,8 @@ class Plugin:
                 user = white['user_id']
                 if allow and (len(group) > 0 or len(user) > 0):
                     allow = False
-                    if self.message.is_group_message() and self.message.group_id in group:
+                    if self.message.is_group_message() and \
+                            (self.message.group_id in group or self.message.user_id in user):
                         allow = True
                     elif self.message.is_private_message() and self.message.user_id in user:
                         allow = True
