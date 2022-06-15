@@ -96,10 +96,10 @@ class Alarm(object):
             data.log.get_logger().debug(f'SIGALRM thread count: {len(self.__thread_list)}')
         # 线程过多上报 由于多每秒一次 SIGALRM 所以线程数应该比较少
         if self.thread_piled_up():
+            warn_msg = f'Thread in class Alarm piled up: thread count {len(self.__thread_list)}'
+            data.log.get_logger().warning(f'In alarm.py: {warn_msg}')
             if self.__thread_piled_up_warn_delay <= 0:
                 self.__thread_piled_up_warn_delay = self.__warn_delay
-                warn_msg = f'Thread in class Alarm piled up: thread count {len(self.__thread_list)}'
-                data.log.get_logger().warning(f'Send report: {warn_msg}')
                 haku.report.report_send(warn_msg)
             else:
                 self.__thread_piled_up_warn_delay -= self.__duration
