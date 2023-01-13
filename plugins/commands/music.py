@@ -23,7 +23,7 @@ def run(message: Message) -> str:
         req[1] = req[1].strip()
     if len(req) > 1 and len(req[1]) > 0:
         try:
-            resp = requests.get(url=URL, params={'keywords': req[1]}, timeout=5)
+            resp = requests.get(url=URL, params={'keywords': req[1]}, timeout=30)
         except Exception as e:
             myLogger.exception(f'RuntimeError {e}')
             return '啊嘞嘞好像出错了'
