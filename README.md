@@ -19,7 +19,8 @@
 + 故障上报到指定 qq 或群组
 + 不重启 bot 即可实现配合 git 的插件更新
 + 配合 systemd 实现更新整个 bot 后的自动重启
-+ 黑白名单（qq/群组过滤），先判断黑名单，后判断白名单
++ 黑名单（qq/群组消息过滤）
++ 每个插件独立的黑白名单（qq/群组过滤），先判断黑名单，后判断白名单
 
 ## 插件
 
@@ -34,6 +35,7 @@
 + [rss](plugins/commands/rss.py) rss 订阅
 + [loongnews](plugins/commands/loongnews.py) 龙芯官网新闻订阅
 + [dizzylab](plugins/commands/dizzylab.py) dizzylab 搜索
++ [qqweight](plugins/commands/qqweight.py) QQ 号权重查询
 + [schedules](plugins/commands/schedules.py) 定时消息
 + [commands](plugins/commands/commands.py) 定时命令
 + [update](plugins/commands/update.py) 更新 bot
