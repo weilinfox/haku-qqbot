@@ -105,6 +105,14 @@ class Message:
         if self.message in self.__block_msg:
             return
 
+        msg_blk_conf = "message.block.json"
+        if data.json.json_have_file(msg_blk_conf):
+            conf_content = data.json.json_load_file(msg_blk_conf)
+            if self.is_group_message() and self.group_id in conf_content["group_id"]:
+                return
+            elif self.is_private_message() and self.user_id in conf_content["user_id"]:
+                return
+
         # 判断复读！
         repeat = False
         if not self.inter_msg:
