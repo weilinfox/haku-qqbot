@@ -149,6 +149,23 @@ class Message:
             if com.match(message_sequence[0][index_len:]) is not None and message_sequence[0][:index_len] == index:
                 plugin_name = message_sequence[0][1:]
                 call_plugin = True
+
+            # 别名调用
+            index_cn = haku.config.Config().get_index_cn()
+            index_len = len(index_cn)
+            if not call_plugin and len(message_sequence[0]) > index_len and message_sequence[0][:index_len] == index_cn:
+                alias_cn = message_sequence[0][index_len:]
+                plugin_alias = {'帮助': 'help',
+                                '点歌': 'music',
+                                '查权重': 'qqweight',
+                                '专辑': 'dizzylab',
+                                '定时命令': 'commands',
+                                '定时消息': 'schedules',
+                                '更新': 'update',
+                                }.get(alias_cn)
+                if plugin_alias is not None:
+                    plugin_name = plugin_alias
+                    call_plugin = True
         except Exception as e:
             data.log.get_logger().exception(f'RuntimeError while checking message: {e}')
 

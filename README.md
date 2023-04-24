@@ -1,12 +1,16 @@
 # haku bot
 
-はく研究所
+2020-2022 はく研究所
 
 在 Linux 配合 [go-cqhttp](https://github.com/Mrs4s/go-cqhttp) 使用的 qq bot 。
 
-这是原 [py-hakuBot](https://github.com/weilinfox/py-hakuBot) 的重构，但并没有达到它的完善程度。
+这是原 [py-hakuBot](https://github.com/weilinfox/py-hakuBot) 的重构。
 
-以及，架构依然乱糟糟。
+当时的目的是做一个相对通用的 QQ bot ，但是能力有限。现在嘛……又不是不能用。
+
+有一个已知问题是代码逻辑问题导致的循环调用爆栈。不太想修所以扔给 systemd 去 restart 了。
+
+本项目以 AGPLv3.0 协议开源。
 
 ## 特性
 
@@ -39,6 +43,16 @@
 + [schedules](plugins/commands/schedules.py) 定时消息
 + [commands](plugins/commands/commands.py) 定时命令
 + [update](plugins/commands/update.py) 更新 bot
+
+## 别名调用
+
++ ``#帮助`` => ``.help``
++ ``#点歌`` => ``.music``
++ ``#查权重`` => ``.qqweight``
++ ``#专辑`` => ``.dizzylab``
++ ``#定时命令`` => ``.commands``
++ ``#定时消息`` => ``.schedules``
++ ``#更新`` => ``.update``
 
 ## 项目结构
 

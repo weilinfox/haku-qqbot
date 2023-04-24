@@ -37,7 +37,8 @@ _DEFAULT_CONFIG = {
         "bot_name": "haku_bot",
         "admin_qq": [],
         "admin_group": [],
-        "index": "."
+        "index": ".",
+        "index_cn": "#"
     }
 }
 
@@ -160,6 +161,9 @@ class Config(object):
 
     def get_index(self) -> str:
         return self.__bot_config['index']
+
+    def get_index_cn(self) -> str:
+        return self.__bot_config.get('index_cn', "#")
 
     def get_key(self, name: str) -> str:
         return self.__bot_keys.get(name, '')
