@@ -35,6 +35,7 @@
 + [music](plugins/commands/music.py) 网易云音乐
 + [qqmusic](plugins/commands/qqmusic.py) QQ音乐（似乎不能用了）
 + [forecast](plugins/commands/forecast.py) 和风天气
++ [wttrin](plugins/commands/wttrin.py) wttr.in
 + [yiyan](plugins/commands/yiyan.py) 一言
 + [rss](plugins/commands/rss.py) rss 订阅
 + [loongnews](plugins/commands/loongnews.py) 龙芯官网新闻订阅
@@ -48,6 +49,7 @@
 
 + ``#帮助`` => ``.help``
 + ``#点歌`` => ``.music``
++ ``#天气`` => ``.wttrin``
 + ``#查权重`` => ``.qqweight``
 + ``#专辑`` => ``.dizzylab``
 + ``#定时命令`` => ``.commands``
