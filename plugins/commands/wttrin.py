@@ -10,6 +10,6 @@ def run(message: Message) -> str:
     if i == 0:
         ans = help_msg
     else:
-        ans = '[CQ:image,file=http://wttr.in/' + req[1] + '_tqp0_lang=en.png,cache=0]'
+        ans = '[CQ:image,file=http://wttr.in/' + req[1] + '_lang=en.png,cache=0]'
 
     return ans
