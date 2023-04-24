@@ -157,6 +157,7 @@ class Message:
                 alias_cn = message_sequence[0][index_len:]
                 plugin_alias = {'帮助': 'help',
                                 '点歌': 'music',
+                                '天气': 'wttrin',
                                 '查权重': 'qqweight',
                                 '专辑': 'dizzylab',
                                 '定时命令': 'commands',
