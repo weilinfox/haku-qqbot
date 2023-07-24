@@ -137,7 +137,7 @@ class Schedule(object):
 
         if time_now.tm_hour == 9 and time_now.tm_min == 0:
             # 早九时进行一次 gotify 上报
-            haku.report.report_gotify('犬夜叉様', '昨日も異常がないです。')
+            haku.report.report_gotify('妖夢様', '昨日も異常がないです。')
 
         self.__minute = time_now.tm_min
         self.__data_reload_delay -= 1
@@ -238,12 +238,12 @@ class Schedule(object):
             for inter, cmd_list in self.__commands_group_dict.items():
                 for cmd in cmd_list:
                     if cmd['group_id'] == qid:
-                        ans.append({'user_id': cmd['user_id'], 'command': prefix+cmd['command'], 'interval': inter})
+                        ans.append({'user_id': cmd['user_id'], 'command': prefix + cmd['command'], 'interval': inter})
         if cmd_type == 'private':
             for inter, cmd_list in self.__commands_private_dict.items():
                 for cmd in cmd_list:
                     if cmd['user_id'] == qid:
-                        ans.append({'command': prefix+cmd['command'], 'interval': inter})
+                        ans.append({'command': prefix + cmd['command'], 'interval': inter})
         return ans
 
     def commands_del(self, cmd_type: str, qid: int, index: int) -> bool:
@@ -384,7 +384,7 @@ class Schedule(object):
             for itm in ans:
                 key = itm['key']
                 itm.pop('key')
-                itm.update({'hour': key//100, 'minute': key%100})
+                itm.update({'hour': key // 100, 'minute': key % 100})
             return ans
         elif type_name == 'private':
             ans = self.__schedule_get(self.__by_time_private_dict, 'user_id', qid)
@@ -408,7 +408,7 @@ class Schedule(object):
             for itm in ans:
                 key = itm['key']
                 itm.pop('key')
-                itm.update({'month': key//100, 'day': key%100})
+                itm.update({'month': key // 100, 'day': key % 100})
             return ans
         elif type_name == 'private':
             ans = self.__schedule_get(self.__by_date_private_dict, 'user_id', qid)
@@ -559,21 +559,23 @@ class Schedule(object):
         """
         with self.__schedules_lock:
             if type_name == 'group':
-                flag, real_index, value = self.__schedule_find_by_index(self.__by_time_group_dict, 'group_id', qid, index)
+                flag, real_index, value = self.__schedule_find_by_index(self.__by_time_group_dict, 'group_id', qid,
+                                                                        index)
                 if not flag:
                     return flag
                 dict_key = value['key']
                 sql = 'DELETE FROM bytime ' \
                       'WHERE type=? AND user_id=? AND group_id=? AND hour=? AND minute=? AND message=?;'
-                sql_value = (type_name, value['user_id'], qid, dict_key//100, dict_key%100, value['message'])
+                sql_value = (type_name, value['user_id'], qid, dict_key // 100, dict_key % 100, value['message'])
                 return self.__schedule_del(self.__by_time_group_dict, dict_key, real_index, sql, sql_value)
             elif type_name == 'private':
-                flag, real_index, value = self.__schedule_find_by_index(self.__by_time_private_dict, 'user_id', qid, index)
+                flag, real_index, value = self.__schedule_find_by_index(self.__by_time_private_dict, 'user_id', qid,
+                                                                        index)
                 if not flag:
                     return flag
                 dict_key = value['key']
                 sql = 'DELETE FROM bytime WHERE type=? AND user_id=? AND hour=? AND minute=? AND message=?;'
-                sql_value = (type_name, value['user_id'], dict_key//100, dict_key%100, value['message'])
+                sql_value = (type_name, value['user_id'], dict_key // 100, dict_key % 100, value['message'])
                 return self.__schedule_del(self.__by_time_private_dict, dict_key, real_index, sql, sql_value)
 
         return False
