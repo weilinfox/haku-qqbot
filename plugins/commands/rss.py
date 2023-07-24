@@ -61,7 +61,7 @@ def __request(url: str) -> str:
     try:
         res = requests.get(url, timeout=10)
         if res.status_code == 200:
-            content = feedparser.parse(res.text)
+            content = feedparser.parse(str(res.content, "utf-8"))
         else:
             return ''
         # 获取推送
