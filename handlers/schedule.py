@@ -524,6 +524,9 @@ class Schedule(object):
                                 }
                     real_index = i
                     break
+            else:
+                continue
+            break
         return index == 0, real_index, ans_dict
 
     def __schedule_del(self, edit_dict: dict, dict_key: int, list_index: int, sql: str, sql_value: tuple) -> bool:
